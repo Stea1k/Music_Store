@@ -96,7 +96,7 @@ public class DataCommands {
 	//Login command for logging into software as a given user.
 	//TODO How does this differ from getting a connection?
 	
-	public boolean login(String User, String Pass) throws SQLException{
+	public static boolean login(String User, String Pass) throws SQLException{
 		ResultSet dataFromTable = null;
 		boolean found = false;
 		try{

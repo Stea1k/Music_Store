@@ -747,11 +747,18 @@ public class Data_Entry_Master_File extends JFrame{
 					// TODO Auto-generated catch block
 					ex.printStackTrace();
 				}
-				if(DataCommands.getLoggedIn()){
-					CardLayout cl = (CardLayout)(contentPane.getLayout());
-					cl.show(contentPane,userPanel);
-				}else {
-					loginFail.setText("Your credentials were not recognized.");
+				try {
+					if(DataCommands.getLoggedIn() && DataCommands.login(txtYourUsername.getText(),
+																		   txtYourPassword.getText())){
+						CardLayout cl = (CardLayout)(contentPane.getLayout());
+						cl.show(contentPane,userPanel);
+					}else {
+						loginFail.setText("Your credentials were not recognized.");
+					}
+				} catch (SQLException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+					loginFail.setText("We are experiencing technical troules, please come back later.");
 				}
 			}
 		};
