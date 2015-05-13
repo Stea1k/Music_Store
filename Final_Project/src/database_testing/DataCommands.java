@@ -1,3 +1,5 @@
+//A variety of data commands. Most have not been tested.
+
 package database_testing;
 
 import java.io.File;
@@ -32,6 +34,7 @@ public class DataCommands {
 		return loggedIn;
 	}
 	
+	//meant to switch logged in constant between true and false. Mostly just caused a lot of bugs.
 	protected static void toggleLoggedIn(){
 		if(loggedIn){
 			loggedIn = false;
@@ -51,43 +54,12 @@ public class DataCommands {
 	}
 	
 	//Presets artist and title selections on the music viewer to false.
-	//When the checkbox is selected, the switch will initiate.
-	
-	protected static boolean artist = false;
-	protected static boolean title = false;
-	
-	protected void switchArtist(){
-		if(artist){
-			artist=false;
-		}else{
-			artist = true;
-		}
-	}
-	protected void switchTitle(){
-		if(title){
-			title=false;
-		}else{
-			title = true;
-		}
-	}
 	protected static void setUser(String User){
 		USER = User;
 	}
 	protected static void setPass(String Pass){
 		PASS = Pass;
 	}
-//	public static void dropAll(){
-//		try{
-//			sqlCom = conn.createStatement();
-//			Object drop = sqlCom.executeUpdate(
-//					"drop database MUSIC"
-//					);
-//			sqlCom.close();
-//			System.out.println("Database successfully deleted");
-//		}catch(SQLException e){
-//			e.printStackTrace();
-//		}
-//	}
 	//Sets up connection to derby database with USER and PASS
 	public static void DataConnect(String User, String Pass) throws ClassNotFoundException{
 		try{
@@ -106,9 +78,7 @@ public class DataCommands {
 			e.printStackTrace(System.err);
 		}
 	}	
-	//Login command for logging into software as a given user.
-	//TODO How does this differ from getting a connection?
-	
+	//meant to compare the database of users against the inputs.
 	public static boolean login(String User, String Pass) throws SQLException{
 		ResultSet dataFromTable = null;
 		boolean found = false;
@@ -131,6 +101,7 @@ public class DataCommands {
 		return found;
 	}
 
+	//adds a new user to the database. MIGHT work.
 	public static boolean newLogin(Users user){
 		boolean success = false;
 		try{
@@ -159,6 +130,7 @@ public class DataCommands {
 		}
 		return success;
 	}
+	//adds a new cosignor to the databse.
 	public static void newCosignor(Cosignor co){
 		try{
 			sqlCom = conn.createStatement();
@@ -174,7 +146,9 @@ public class DataCommands {
 			e.printStackTrace(System.err);
 		}
 	}
-//	public void addMusicRecords()
+	
+	//adds new music records to the database. There is nothing that applies the ID of the cosignor, so
+	//this is incomplete.
 	public void addMusicRecords(File file){
 		try{
 			sqlCom = conn.createStatement();
@@ -187,25 +161,37 @@ public class DataCommands {
 			e.printStackTrace(System.err);
 		}
 	}
-	public static DefaultTableModel searchRecords(String entry) throws SQLException{
+	
+	//returns all columns from a given table. sends them to the tableOptions Jcombobox
+	public static ArrayList<String> getTableCols(String table) throws SQLException{
+		DefaultTableModel def = new DefaultTableModel();
+		ArrayList<String> cNames = new ArrayList<String>();
+		sqlCom = conn.createStatement();
+		ResultSet getTable = sqlCom.executeQuery(
+				"select * from "+table);
+		ResultSetMetaData rsmd = getTable.getMetaData();
+		int cCount = rsmd.getColumnCount();
+		for(int c = 1; c < cCount; c ++){
+			cNames.add(rsmd.getColumnName(c));
+		}
+		sqlCom.close();
+		return cNames;
+	}
+	
+	//the default search query. MIGHT work. needs data to compare against, unfortunately.
+	public static DefaultTableModel searchRecords(String Table, String col, String entry) throws SQLException{
 		DefaultTableModel def = new DefaultTableModel();
 		try{
 			sqlCom = conn.createStatement();
 			ResultSet dataFromRecords = null;
-			if(artist && !title){
-				dataFromRecords = sqlCom.executeQuery(
-						"select title,artist,price "
-						+ "from RECORDS where artist like ("+entry+")");
-			}else if(!artist && title){
-				dataFromRecords = sqlCom.executeQuery(
-						"select title,artist,price "
-						+ "from RECORDS where title like ("+entry+")");
-			}else if(artist && title){
-				dataFromRecords = sqlCom.executeQuery(
-						"select title,artist,price "
-						+ "from RECORDS where title like ("+entry+")"
-								+ " or artist like ("+entry+")");
+			
+			String query = "select * from "+Table;
+			if(entry != null){
+				query += " where "+col+" like "+"%"+entry+"%";
 			}
+			
+			dataFromRecords = sqlCom.executeQuery(query);
+			
 			//Ideas for this came from Paul Vargas (Simplest Code to populate JTable from result set, Stackoverflow)
 			ResultSetMetaData rsmd = dataFromRecords.getMetaData();
 			
@@ -233,5 +219,44 @@ public class DataCommands {
 		}
 		sqlCom.close();
 		return def;
+	}
+	//unlike the default, this has a preset expected result.
+	//checks for music that has been around for longer than 30 days.
+	public static DefaultTableModel getbargains(){
+		DefaultTableModel def = new DefaultTableModel();
+		try{
+			sqlCom.getConnection();
+			ResultSet bargains = sqlCom.executeQuery(
+					"select * from RECORDS join SALES "
+					+ "on RECORDS.musicID = SALES.musicID "
+					+ "where timestampdiff(SQL_TSI_DAY,dateAdded,date) > 30"
+					);
+			//Ideas for this came from Paul Vargas (Simplest Code to populate JTable from result set, Stackoverflow)
+			ResultSetMetaData rsmd = bargains.getMetaData();
+			
+			//table metadata constructing the table.
+			Vector<String> columnNames = new Vector<String>();
+		    int columnCount = rsmd.getColumnCount();
+		    for (int column = 1; column <= columnCount; column++) {
+		        columnNames.add(rsmd.getColumnName(column));
+		    }
+		    //data populating the table
+		    Vector<Vector<Object>> data = new Vector<Vector<Object>>();
+		    while (bargains.next()) {
+		        Vector<Object> vector = new Vector<Object>();
+		        for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
+		            vector.add(bargains.getObject(columnIndex));
+		        }
+		        data.add(vector);
+		    }
+		    //end of Paul Vargas
+			/////////////////////////////////////////////////////////////////////
+		    def = new DefaultTableModel(data, columnNames);
+		    bargains.close();
+		    sqlCom.close();
+		}catch(SQLException e){
+			e.getStackTrace();
+		}
+	    return def;
 	}
 }

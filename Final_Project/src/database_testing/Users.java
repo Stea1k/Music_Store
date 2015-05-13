@@ -1,3 +1,4 @@
+	//the Users class and all of it's parts
 package database_testing;
 
 public class Users {

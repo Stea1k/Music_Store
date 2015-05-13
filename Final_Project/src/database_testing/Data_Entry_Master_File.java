@@ -7,6 +7,7 @@ import java.awt.Frame;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
+import javax.swing.table.TableModel;
 
 import java.awt.GridBagLayout;
 
@@ -33,6 +34,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentListener;
 
+import javax.swing.ComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JToolBar;
 import javax.swing.JTextArea;
@@ -40,6 +42,12 @@ import javax.swing.JLabel;
 import javax.swing.JTextField;
 
 import java.awt.CardLayout;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 
 import javax.swing.JTextPane;
 import javax.swing.JCheckBox;
@@ -67,8 +75,11 @@ public class Data_Entry_Master_File extends JFrame{
 	private JTextField importFile;
 	private JTextField cosignorName;
 	private JTextField coPhoneNum;
+	private ArrayList<String> cols = new ArrayList<String>();
 	
 	private JTable table;
+	private JTable results;
+	private static final int saveLog = 1;
 	
 	protected void resetUsername(){
 		txtYourUsername.setText(" ");
@@ -80,55 +91,11 @@ public class Data_Entry_Master_File extends JFrame{
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
+		//presetting several items on the GUI.
 		Statement statement = null;
 		Connection conn = null;
 		ResultSet rs = null;
 		ArrayList<Music> timeList = new ArrayList<Music>();
-		
-//		Music hellsbells = new Music("Hell's Bells", "ACDC");
-		
-		//checks database connection and table access.
-//		try{
-//			Class.forName(driver);
-//			conn = DriverManager.getConnection(protocol + dbName + ";create=true", USER, PASS);
-//			statement = conn.createStatement();
-//			System.out.println("connection established");
-//			String createTable = "create Table MusicRecords (RecordName varchar(20), RecordArtist varchar(20))";
-//			String getFromMusicRecords = "Select * from MusicRecords";
-//			String addToRecords = "insert into MusicRecords Values('Hells Bells','ACDC')";
-//			String del = "drop table MusicRecords";
-//			try{
-//				statement.executeUpdate(del);
-//			}catch(SQLException e){
-//				e.printStackTrace();
-//				System.out.println("Table deletion failed");
-//			}
-//			try{
-//				statement.executeUpdate(createTable);
-//				System.out.println("Table Created Successfully");
-//				try{
-//					statement.executeUpdate(addToRecords);
-//					System.out.println("Records added successfully");
-//				}catch(SQLException e){
-//					e.printStackTrace();
-//					System.out.println("Table addition failed");
-//				}
-//				try{
-//					statement.executeQuery(getFromMusicRecords);
-//				}catch(SQLException e){
-//					e.printStackTrace();
-//					System.out.println("Table request failed");
-//				}
-//			}catch(SQLException e){
-//				e.printStackTrace();
-//				System.out.println("Table creation failed");
-//			}
-//		}catch(SQLException e){
-//			e.printStackTrace(System.err);
-//		} catch (ClassNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
 		
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
@@ -150,6 +117,7 @@ public class Data_Entry_Master_File extends JFrame{
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 613, 517);
 		
+		//menu bar. most items work.
 		JMenuBar menuBar = new JMenuBar();
 		setJMenuBar(menuBar);
 		
@@ -161,24 +129,11 @@ public class Data_Entry_Master_File extends JFrame{
 		mntmQuit.addActionListener(new ExitListener());
 		mnFile.add(mntmQuit);
 		
-//		JMenuItem mntmRefresh = new JMenuItem("Refresh");
-//		mntmRefresh.addActionListener(new ActionListener() {
-//			@Override
-//			public void actionPerformed(ActionEvent e) {
-//				//TODO
-//				//----------------------------------------------------------------//
-//			}
-//		});
-		
 		JMenuItem mntmLogout = new JMenuItem("Logout");
 		mnFile.add(mntmLogout);
 		
 		JMenu mnTools = new JMenu("Tools");
 		menuBar.add(mnTools);
-		
-//		if(!loggedIn){
-//			mnTools.setVisible("false");
-//		}
 		
 		JMenuItem mntmAddMusic = new JMenuItem("Add Music");
 		mnTools.add(mntmAddMusic);
@@ -189,11 +144,16 @@ public class Data_Entry_Master_File extends JFrame{
 		JMenuItem mntmSearchMusic = new JMenuItem("Search Music");
 		mnTools.add(mntmSearchMusic);
 		
+		//The original JPanel
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
+		
+		//setting the panel layout to cards.
 		contentPane.setLayout(new CardLayout());
 		
+		//the first card - login. doesn't work properly.
+		//will log you in, and still requires the correct information, but sql injection works just fine.
 		JPanel loginCard = new JPanel();
 		contentPane.add(loginCard, loginPanel);
 		GridBagLayout gbl_loginCard = new GridBagLayout();
@@ -203,6 +163,7 @@ public class Data_Entry_Master_File extends JFrame{
 		gbl_loginCard.rowWeights = new double[]{0.0, Double.MIN_VALUE};
 		loginCard.setLayout(gbl_loginCard);
 
+		//the user card. has all of the tools used for database interaction.
 		JPanel userCard = new JPanel();
 		contentPane.add(userCard,userPanel);
 		GridBagLayout gbl_userCard = new GridBagLayout();
@@ -212,6 +173,8 @@ public class Data_Entry_Master_File extends JFrame{
 		gbl_userCard.rowWeights = new double[]{0.0, 1.0, Double.MIN_VALUE};
 		userCard.setLayout(gbl_userCard);
 
+		//Card for adding someone to the database.
+		//not set up, but can be viewed.
 		JPanel newUserCard = new JPanel();
 		contentPane.add(newUserCard,"new User");
 		GridBagLayout gbl_newUserCard = new GridBagLayout();
@@ -221,6 +184,8 @@ public class Data_Entry_Master_File extends JFrame{
 		gbl_newUserCard.rowWeights = new double[]{1.0, Double.MIN_VALUE};
 		newUserCard.setLayout(gbl_newUserCard);
 		
+		//If a user is successfully added, this will say so, otherwise 
+		//it tells you that the attempt failed
 		JPanel addUserFinish = new JPanel();
 		contentPane.add(addUserFinish,"addUserFinish");
 		GridBagLayout gbl_addUserFinish = new GridBagLayout();
@@ -230,6 +195,8 @@ public class Data_Entry_Master_File extends JFrame{
 		gbl_addUserFinish.rowWeights = new double[]{0.0, 0.0, Double.MIN_VALUE};
 		addUserFinish.setLayout(gbl_addUserFinish);
 		
+		//add Music Panel
+		//does not work, insert command not set up with buttons.
 		JPanel addMusic = new JPanel();
 		contentPane.add(addMusic,"addMusic");
 		GridBagLayout gbl_addMusic = new GridBagLayout();
@@ -239,6 +206,7 @@ public class Data_Entry_Master_File extends JFrame{
 		gbl_addMusic.rowWeights = new double[]{0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
 		addMusic.setLayout(gbl_addMusic);
 		
+		//not only does this not work, but you can't even access it.
 		JPanel addCosignor = new JPanel();
 		contentPane.add(addCosignor,"addcosignor");
 		GridBagLayout gbl_addCosignor = new GridBagLayout();
@@ -480,10 +448,11 @@ public class Data_Entry_Master_File extends JFrame{
 		newUserPanel.add(newUserAdd, gbc_newUserAdd);
 	  //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 		//NEW USER ENDT<---------------------------------------------------------------------->
-
-
+		////////////////////////////////////////////////////////////////////////////////////////
+		
 	  //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 		//TOP PANEL<-------------------------------------------------------------------------->
+		////////////////////////////////////////////////////////////////////////////////////////
 		
 		JPanel top_panel = new JPanel();
 		GridBagConstraints gbc_top_panel = new GridBagConstraints();
@@ -609,10 +578,13 @@ public class Data_Entry_Master_File extends JFrame{
 		gbl_userCards.columnWeights = new double[]{0.0, Double.MIN_VALUE};
 		gbl_userCards.rowWeights = new double[]{1.0, Double.MIN_VALUE};
 		userCards.setLayout(gbl_userCards);
-		
+	  //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 		//LOGGED IN END <------------------------------------------------------------>
-		
+		////////////////////////////////////////////////////////////////////////////////////////
+
+	  //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 		//OUTPUT START <------------------------------------------------------------->
+		////////////////////////////////////////////////////////////////////////////////////////
 		
 		JPanel output_Panel = new JPanel();
 		GridBagConstraints gbc_output_Panel = new GridBagConstraints();
@@ -653,13 +625,26 @@ public class Data_Entry_Master_File extends JFrame{
 		gbc_lblSearchMusic.gridy = 0;
 		panel.add(lblSearchMusic, gbc_lblSearchMusic);
 		
-		JComboBox comboBox = new JComboBox();
-		GridBagConstraints gbc_comboBox = new GridBagConstraints();
-		gbc_comboBox.insets = new Insets(0, 0, 5, 0);
-		gbc_comboBox.fill = GridBagConstraints.HORIZONTAL;
-		gbc_comboBox.gridx = 0;
-		gbc_comboBox.gridy = 1;
-		panel.add(comboBox, gbc_comboBox);
+		String[] Tables = {"USERS","COSIGNOR","RECORDS","SALES"};
+		JComboBox tableOptions = new JComboBox(Tables);
+
+		//attempts to get the columns of the table being viewed by the Table combobox
+		tableOptions.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					cols = DataCommands.getTableCols((String) tableOptions.getSelectedItem());
+				} catch (SQLException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+		});
+		GridBagConstraints gbc_tableOptions = new GridBagConstraints();
+		gbc_tableOptions.insets = new Insets(0, 0, 5, 0);
+		gbc_tableOptions.fill = GridBagConstraints.HORIZONTAL;
+		gbc_tableOptions.gridx = 0;
+		gbc_tableOptions.gridy = 1;
+		panel.add(tableOptions, gbc_tableOptions);
 		
 		JLabel lblSearchColumn = new JLabel("By Column");
 		GridBagConstraints gbc_lblSearchColumn = new GridBagConstraints();
@@ -668,13 +653,20 @@ public class Data_Entry_Master_File extends JFrame{
 		gbc_lblSearchColumn.gridy = 2;
 		panel.add(lblSearchColumn, gbc_lblSearchColumn);
 		
-		JComboBox comboBox_1 = new JComboBox();
-		GridBagConstraints gbc_comboBox_1 = new GridBagConstraints();
-		gbc_comboBox_1.insets = new Insets(0, 0, 5, 0);
-		gbc_comboBox_1.fill = GridBagConstraints.HORIZONTAL;
-		gbc_comboBox_1.gridx = 0;
-		gbc_comboBox_1.gridy = 3;
-		panel.add(comboBox_1, gbc_comboBox_1);
+		//sets the table Jcombobox to a default value of whatever the table box is set to.
+		try {
+			cols = DataCommands.getTableCols((String) tableOptions.getSelectedItem());
+		} catch (SQLException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		JComboBox Columns = new JComboBox((ComboBoxModel) cols);
+		GridBagConstraints gbc_Columns = new GridBagConstraints();
+		gbc_Columns.insets = new Insets(0, 0, 5, 0);
+		gbc_Columns.fill = GridBagConstraints.HORIZONTAL;
+		gbc_Columns.gridx = 0;
+		gbc_Columns.gridy = 3;
+		panel.add(Columns, gbc_Columns);
 		
 		searchEntry = new JTextField();
 		searchEntry.setText(" ");
@@ -693,24 +685,26 @@ public class Data_Entry_Master_File extends JFrame{
 		gbc_lblOptions.gridy = 5;
 		panel.add(lblOptions, gbc_lblOptions);
 		
+		//given the entries that have been provided, this button attempts to return a table
 		JButton searchMusicRecords = new JButton("Search");
+		searchMusicRecords.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					results = new JTable(DataCommands.searchRecords((String)tableOptions.getSelectedItem(),(String) Columns.getSelectedItem(), searchEntry.getText()));
+				} catch (SQLException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+		});
 		GridBagConstraints gbc_searchMusicRecords = new GridBagConstraints();
 		gbc_searchMusicRecords.insets = new Insets(0, 0, 5, 0);
 		gbc_searchMusicRecords.fill = GridBagConstraints.HORIZONTAL;
 		gbc_searchMusicRecords.gridx = 0;
 		gbc_searchMusicRecords.gridy = 6;
 		panel.add(searchMusicRecords, gbc_searchMusicRecords);
-		searchMusicRecords.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				try {
-					table = new JTable(DataCommands.searchRecords(searchEntry.getText()));
-				} catch (SQLException ex) {
-					// TODO Auto-generated catch block
-					ex.printStackTrace();
-				}
-			}
-		});
 		
+		//prints a file of the table being viewed. might work?
 		JButton btnPrintFileOf = new JButton("Print Table");
 		GridBagConstraints gbc_btnPrintFileOf = new GridBagConstraints();
 		gbc_btnPrintFileOf.fill = GridBagConstraints.HORIZONTAL;
@@ -719,7 +713,13 @@ public class Data_Entry_Master_File extends JFrame{
 		gbc_btnPrintFileOf.gridy = 7;
 		panel.add(btnPrintFileOf, gbc_btnPrintFileOf);
 		
+		//returns a table of all records that have been around for longer than 30 days.
 		JButton btnBargainBin = new JButton("Bargain Bin");
+		btnBargainBin.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				results = new JTable(DataCommands.getbargains());
+			}
+		});
 		GridBagConstraints gbc_btnBargainBin = new GridBagConstraints();
 		gbc_btnBargainBin.fill = GridBagConstraints.HORIZONTAL;
 		gbc_btnBargainBin.insets = new Insets(0, 0, 5, 0);
@@ -727,6 +727,7 @@ public class Data_Entry_Master_File extends JFrame{
 		gbc_btnBargainBin.gridy = 8;
 		panel.add(btnBargainBin, gbc_btnBargainBin);
 		
+		//is meant to insert a given selection into the sales table. does not work.
 		JButton btnPurchase = new JButton("Add Purchase");
 		GridBagConstraints gbc_btnPurchase = new GridBagConstraints();
 		gbc_btnPurchase.fill = GridBagConstraints.HORIZONTAL;
@@ -742,6 +743,8 @@ public class Data_Entry_Master_File extends JFrame{
 		gbc_lblEditing.gridy = 12;
 		panel.add(lblEditing, gbc_lblEditing);
 		
+		//meant to delete a value on the table. Will not work.
+		//was intended for use with a JList.
 		JButton btnDelete = new JButton("Delete Selected");
 		GridBagConstraints gbc_btnDelete = new GridBagConstraints();
 		gbc_btnDelete.insets = new Insets(0, 0, 5, 0);
@@ -750,6 +753,7 @@ public class Data_Entry_Master_File extends JFrame{
 		gbc_btnDelete.gridy = 13;
 		panel.add(btnDelete, gbc_btnDelete);
 		
+		//is supposed to delete all tables in the database. does not work.
 		JButton btnDeleteAll = new JButton("Delete All");
 		GridBagConstraints gbc_btnDeleteAll = new GridBagConstraints();
 		gbc_btnDeleteAll.fill = GridBagConstraints.HORIZONTAL;
@@ -757,22 +761,22 @@ public class Data_Entry_Master_File extends JFrame{
 		gbc_btnDeleteAll.gridy = 14;
 		panel.add(btnDeleteAll, gbc_btnDeleteAll);
 		
-		JList list = new JList();
-		GridBagConstraints gbc_list = new GridBagConstraints();
-		gbc_list.fill = GridBagConstraints.BOTH;
-		gbc_list.gridx = 1;
-		gbc_list.gridy = 0;
-		output_Panel.add(list, gbc_list);
-		
+		results = new JTable();
+		GridBagConstraints gbc_results = new GridBagConstraints();
+		gbc_results.fill = GridBagConstraints.BOTH;
+		gbc_results.gridx = 1;
+		gbc_results.gridy = 0;
+		output_Panel.add(results, gbc_results);
+
 	  //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-		//Search tools
+		//OUTPUT END<--------------------------------------------------------------------->
 		////////////////////////////////////////////////////////////////////////////////////////////
 				
-		//OUTPUT END<--------------------------------------------------------------------->
-		
+	  //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 		//addUserResult Start
-		
+		////////////////////////////////////////////////////////////////////////////////////////////		
 
+		//lets the user know if they were succesfully added.
 		JLabel lblResultOfAdding = new JLabel("Add new user result");
 		GridBagConstraints gbc_lblResultOfAdding = new GridBagConstraints();
 		gbc_lblResultOfAdding.insets = new Insets(0, 0, 5, 0);
@@ -786,10 +790,14 @@ public class Data_Entry_Master_File extends JFrame{
 		gbc_returnToLogin.gridy = 1;
 		addUserFinish.add(returnToLogin, gbc_returnToLogin);
 		
+
+	  //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 		//action handlers<---------------------------------------------------------------->
+		////////////////////////////////////////////////////////////////////////////////////////////
 		
 		//Login button actions for visibility settings.
 
+		//sends you to the user panel after log in.
 		ActionListener toUserPanel = new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
@@ -820,6 +828,8 @@ public class Data_Entry_Master_File extends JFrame{
 //				}
 			}
 		};
+		
+		//sends you back to the login panel.
 		ActionListener toLoginPanel = new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
@@ -831,6 +841,8 @@ public class Data_Entry_Master_File extends JFrame{
 				pack();
 			}
 		};
+		
+		//sends you to the add user card
 		ActionListener toNewUser = new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
@@ -839,6 +851,7 @@ public class Data_Entry_Master_File extends JFrame{
 				pack();
 			}
 		};
+		//checks if you have been added successfully.
 		ActionListener runCheck = new ActionListener(){
 			Users newUser = new Users(UserName.getText(),
 					  			  	  UserPass.getText(),
@@ -853,6 +866,7 @@ public class Data_Entry_Master_File extends JFrame{
 				pack();
 			}
 		};
+		//imports a file to the Music table. might work?
 		ActionListener addMusicPanel = new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -860,6 +874,7 @@ public class Data_Entry_Master_File extends JFrame{
 				cl.show(contentPane,"addMusic");
 			}
 		};
+		//sends you to the add cosignor card.
 		ActionListener addCosignorPanel = new ActionListener(){
 			public void actionPerformed(ActionEvent e) {
 				CardLayout cl = (CardLayout)(contentPane.getLayout());
@@ -871,12 +886,31 @@ public class Data_Entry_Master_File extends JFrame{
 //				DataCommands.dropAll();
 //			}
 //		});
+		//attempts to add the new cosignor.
 		btnAddCosignor.addActionListener(new ActionListener() {
 			Cosignor newCosignor = new Cosignor(cosignorName.getText(),coPhoneNum.getText());
 			public void actionPerformed(ActionEvent e) {
 				DataCommands.newCosignor(newCosignor);
 			}
 		});
+		//attempts to print a file of the current table.
+		btnPrintFileOf.addActionListener(new ActionListener() {
+			//table writer code used from Guido Anselmi at stackoverflow. may not work properly.
+			public void actionPerformed(ActionEvent e) {
+				try {
+					FileWriter fw = new FileWriter(new File("table_"+saveLog+".txt"));
+					TableModel tobesaved = (TableModel) results;
+					for(int i = 0; i < tobesaved.getRowCount(); i++){
+						for(int x = 0; x < tobesaved.getColumnCount(); x ++){
+							fw.write((int) tobesaved.getValueAt(i, x));
+						}
+					}
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+		}});
+		//all of the currently available action commands.
 		btnLogin.addActionListener(toUserPanel);
 		mntmSearchMusic.addActionListener(toUserPanel);
 		newUserCancel.addActionListener(toLoginPanel);

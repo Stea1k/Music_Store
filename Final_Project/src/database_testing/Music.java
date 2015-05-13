@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
+//the music class and all of it's parts
 public class Music {
 	private String title;
 	private String artist;

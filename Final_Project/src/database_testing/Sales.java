@@ -1,3 +1,5 @@
+// the sales class and all of it's relevant attributes.
+
 package database_testing;
 
 import java.text.SimpleDateFormat;

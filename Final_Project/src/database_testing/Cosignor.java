@@ -1,3 +1,4 @@
+//The Cosignor class and all of it's parts.
 package database_testing;
 
 public class Cosignor{
